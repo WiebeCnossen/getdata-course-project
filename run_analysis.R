@@ -13,15 +13,15 @@ readDataFile <- function(..., rootFolder = "UCI HAR Dataset") {
 
 # Initialize lookup table for activity labels
 activityLabels <- read.table(readDataFile("activity_labels.txt"))
-getActivityLabel <- function(code) {
-        activityLabels$V2[code]
-}
+getActivityLabel <- function(code) activityLabels$V2[code]
 
 # Determine which data to use and their column names
 features <- read.table(readDataFile("features.txt"))
 positions <- which(grepl("-(mean|std)..-", features[,2]))
-colnames <- features$V2[positions]
-
+colnames <- features$V2[positions] %>%
+        gsub(pattern="-mean\\(\\)-", replacement="Mean") %>%
+        gsub(pattern="-std\\(\\)-",  replacement="StdDev")
+        
 # Function to data frame for given subfolder (test or train)
 getDataFrame <- function(folder) {
         uciTable <- function(prefix) {
@@ -49,8 +49,9 @@ all <- c("test","train") %>%
         rbind.fill
 
 # Aggregate and store data
-all %>%
+means <- all %>%
         data.table %>%
         select(-Subject, -Activity) %>%
-        aggregate(list(all$Subject, all$Activity), mean) %>%
-        write.table("means.txt", row.names = FALSE)
+        aggregate(list(all$Subject, all$Activity), mean)
+names(means) <- c("Subject", "Activity", colnames)
+write.table(means, "means.txt", row.names = FALSE)
